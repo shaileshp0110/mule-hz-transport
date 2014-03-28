@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hz="http://www.mulesoft.org/schema/mule/hz"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xsi:schemaLocation="
+       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.3/mule.xsd
+       http://www.mulesoft.org/schema/mule/hz META-INF/mule-hz.xsd
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+    <spring:beans>
+        <spring:import resource="spring-hazelcast.xml" />
+    </spring:beans>
+
+    <custom-transformer name="responseMessageTransformer"
+                        class="com.mule.transport.hz.transformer.HzMapResponseMessageTransformer">
+        <spring:property name="mapName" value="submitOrder_C" />
+    </custom-transformer>
+    <hz:connector name="hzConnector" hzInstance-ref="hzInstance" >
+        <!-- TODO Add connector specific properties here and then assert that 
+             they have been set in com.mule.transport.hz.HzNamespaceHandlerTestCase -->
+    </hz:connector>
+
+</mule>

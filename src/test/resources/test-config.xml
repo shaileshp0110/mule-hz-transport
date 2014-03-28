@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hz="http://www.mulesoft.org/schema/mule/hz"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:quartz="http://www.mulesoft.org/schema/mule/quartz"
+      xmlns:test="http://www.mulesoft.org/schema/mule/test"
+      xsi:schemaLocation="
+       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.3/mule.xsd
+       http://www.mulesoft.org/schema/mule/hz META-INF/mule-hz.xsd
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.3/mule-vm.xsd
+       http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/3.3/mule-quartz.xsd
+       http://www.mulesoft.org/schema/mule/test http://www.mulesoft.org/schema/mule/test/current/mule-test.xsd">
+
+    <quartz:endpoint jobName="testJob1" startDelay="2500"  repeatInterval="1" repeatCount="-1" name="testEndpoint"/>
+
+    <spring:beans>
+        <spring:import resource="spring-hazelcast.xml" />
+    </spring:beans>
+
+    <hz:get-response-from-map-transformer hzInstance-ref="hzInstance"  name="responseMap" mapName="submitOrder_C1"  timeout="120" frequency="20"/>
+     <hz:object-to-hz-message-transformer name="objectohzmessage"></hz:object-to-hz-message-transformer>
+
+    <hz:connector name="hzConnector" hzInstance-ref="hzInstance" />
+    <hz:connector name="hzConnector2" hzInstance-ref="hzInstance" />
+
+    <flow name="simpleTestFlow">
+        <hz:inbound-endpoint address="hz://map/submitOrder_C"  connector-ref="hzConnector"/>
+
+        <log-component/>
+        <hz:outbound-endpoint address="hz://map/submitOrder_B" connector-ref="hzConnector"/>
+
+   </flow>
+    <flow name="testFlow1">
+        <hz:inbound-endpoint address="hz://queue/submitOrder_Q2"  connector-ref="hzConnector2">
+            <custom-transaction action="ALWAYS_BEGIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+        </hz:inbound-endpoint>
+        <log-component/>
+
+        <choice>
+            <when>
+                <expression-filter evaluator="payload-type" expression="com.mule.transport.hz.IMessage"/>
+                <!--<expression-component>payload.DLQRedeliveryCount = payload.DLQRedeliveryCount + 2</expression-component>-->
+                <log-component/>
+
+                <hz:outbound-endpoint address="hz://queue/submitOrder_Q3"  connector-ref="hzConnector2">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+
+            </when>
+            <otherwise>
+                <test:component throwException="true"/>
+            </otherwise>
+        </choice>
+    </flow>
+
+    <flow name="transactedFlow">
+        <hz:inbound-endpoint address="hz://queue/submitOrder_Q1" connector-ref="hzConnector2">
+        </hz:inbound-endpoint>
+        <hz:outbound-endpoint address="hz://map/submitOrder_C1" connector-ref="hzConnector2">
+        </hz:outbound-endpoint>
+         <transformer ref="responseMap"></transformer>
+        <log-component/>
+    </flow>
+
+
+
+</mule>

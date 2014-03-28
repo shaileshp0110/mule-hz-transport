@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<xsd:schema xmlns="http://www.mulesoft.org/schema/mule/hz"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:mule="http://www.mulesoft.org/schema/mule/core"
+            xmlns:schemadoc="http://www.mulesoft.org/schema/mule/schemadoc"
+            targetNamespace="http://www.mulesoft.org/schema/mule/hz"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified">
+
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:import namespace="http://www.mulesoft.org/schema/mule/core"
+                schemaLocation="http://www.mulesoft.org/schema/mule/core/3.1/mule.xsd" />
+    <xsd:import namespace = "http://www.mulesoft.org/schema/mule/schemadoc"
+                schemaLocation = "http://www.mulesoft.org/schema/mule/schemadoc/3.1/mule-schemadoc.xsd"/>
+
+    <xsd:annotation>
+        <xsd:documentation>Uses Hazelcast Queue and Map to create giving clustering capabilties to mule </xsd:documentation>
+        <xsd:appinfo>
+            <schemadoc:short-name>Hz</schemadoc:short-name>
+            <schemadoc:page-title>Hz Transport</schemadoc:page-title>
+            <schemadoc:transport-features
+            receiveEvents="true" dispatchEvents="false" responseEvents="true"
+                                          requestEvents="true"
+                                          transactions="true" streaming="false">
+                <schemadoc:inboundMEPs in-only="true" in-optional-out="true" in-out="true"/>
+                <schemadoc:outboundMEPs out-only="true" out-in="true" out-optional-in="true"/>
+            </schemadoc:transport-features>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <xsd:element name="connector" type="hzConnectorType" substitutionGroup="mule:abstract-connector">
+        <xsd:annotation>
+            <xsd:documentation>
+                Uses Hazelcast Queue and Map to create giving clustering capabilties to mule 
+            </xsd:documentation>
+        </xsd:annotation>
+    </xsd:element>
+
+
+    <xsd:complexType name="hzConnectorType">
+        <xsd:complexContent>
+            <xsd:extension base="mule:connectorType">
+            <!--
+
+            TODO for simple property types you can just add xsd:attribute elements here
+            For complex properties with multiple values you can add custom elements and register
+            a definition parser with hzNamespaceHandler.
+
+            For example -
+
+            <xsd:attribute name="swizzleSize" type="mule:substitutableInt">
+                <xsd:annotation>
+                    <xsd:documentation>
+                        Sets the amount of swizzle available for your twizzle
+                    </xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+
+            Note the type of the attribute is mule:substitutableInt.  For non-string simple
+            types you should use mule:substitutableBoolean, mule:substitutableLong, etc since
+            these types allow property placeholders to be used instead of the actual value.
+            The property can then be set according to the properties available to the MUle instance. i.e
+
+            <hz:connector name="smallTwizzler" swizzlerSize="${small.swizzle}"/>
+
+            where small.swizzle is set in a properties files or system property.  This makes it easy
+            to use the same config file for differnet environments such as Developement, UAT and Production
+
+            -->
+                <xsd:attribute name="hzInstance-ref" type="xsd:string" use="required">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            Bean reference to the HazelCast Instance Configured in Spring xml.
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="hzCollection" type="xsd:string">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            Bean reference to the HazelCast Map Configured in Spring xml.
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <!--
+    The following define endpoint elements for this transport. Attributes for the endpoint can be defined at the section
+    at the bottom
+    -->
+    <xsd:element name="inbound-endpoint" type="inboundEndpointType" substitutionGroup="mule:abstract-inbound-endpoint"/>
+    <xsd:complexType name="inboundEndpointType">
+        <xsd:complexContent>
+            <xsd:extension base="mule:inboundEndpointType">
+                <xsd:attributeGroup ref="addressAttributes"/>
+                <xsd:attributeGroup ref="propertyAttributes"/>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <xsd:element name="outbound-endpoint" type="outboundEndpointType" substitutionGroup="mule:abstract-outbound-endpoint"/>
+    <xsd:complexType name="outboundEndpointType">
+        <xsd:complexContent>
+            <xsd:extension base="mule:outboundEndpointType">
+                <xsd:attributeGroup ref="addressAttributes"/>
+                <xsd:attributeGroup ref="propertyAttributes"/>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <xsd:element name="endpoint" type="globalEndpointType" substitutionGroup="mule:abstract-global-endpoint"/>
+    <xsd:complexType name="globalEndpointType">
+        <xsd:complexContent>
+            <xsd:extension base="mule:globalEndpointType">
+                <xsd:attributeGroup ref="addressAttributes"/>
+                <xsd:attributeGroup ref="propertyAttributes"/>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <xsd:attributeGroup name="addressAttributes">
+    <!--
+        TODO define address attributes for this endpoints i.e. queue, host, port, etc
+        <xsd:attribute name="foo" type="xsd:string"/>
+    -->
+    </xsd:attributeGroup>
+
+    <xsd:attributeGroup name="propertyAttributes">
+         <!--
+        TODO define property attributes for this endpoint. These are properties that can configure the way the
+        transport behaves but are not used to create the endpoint address.
+        <xsd:attribute name="bar" type="xsd:string"/>
+    -->
+        <xsd:attribute name="key" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation>key to get the message from the Hazelcast Map</xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="remove" type="xsd:boolean" default="true" use="optional">
+            <xsd:annotation>
+                <xsd:documentation>remove the message from the Hazelcast Map ,default is true</xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+    </xsd:attributeGroup>
+
+    <xsd:element name="object-to-hz-message-transformer" type="mule:abstractTransformerType" substitutionGroup="mule:abstract-transformer">
+        <xsd:annotation>
+            <xsd:documentation>
+                The object-to-hz-message-transformer element configures a transformer that converts an object into Hz messages.
+            </xsd:documentation>
+        </xsd:annotation>
+    </xsd:element>
+
+    <xsd:element name="get-response-from-map-transformer" type="responseMapTransformerType" substitutionGroup="mule:abstract-transformer">
+        <xsd:annotation>
+            <xsd:documentation>
+                The Get Response from Map transformer element configures a transformer that get response from the Hazel cast map message into an object by extracting the message payload
+                using the uniqueId as map key to fetch the response
+            </xsd:documentation>
+        </xsd:annotation>
+    </xsd:element>
+    <xsd:complexType name="responseMapTransformerType">
+        <xsd:complexContent>
+            <xsd:extension base="mule:abstractTransformerType">
+                <xsd:attribute name="hzInstance-ref" type="xsd:string" use="required">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            Bean reference to the HazelCast Instance Configured in Spring xml.
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="mapName" type="xsd:string">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                           Name of the response map set on the Hz outbound endpoint.
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="removeKey" type="xsd:boolean" default="true">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            To Keep the object in map or remove the object
+                        </xsd:documentation>
+                     </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="timeout" type="xsd:int">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            To Keep the object in map or remove the object
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="frequency" type="xsd:int">
+                    <xsd:annotation>
+                        <xsd:documentation>
+                            To Keep the object in map or remove the object
+                        </xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+</xsd:schema>

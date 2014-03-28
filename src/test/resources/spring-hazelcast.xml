@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd ">
+    <beans xmlns="http://www.springframework.org/schema/beans"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:context="http://www.springframework.org/schema/context"
+           xmlns:hz="http://www.hazelcast.com/schema/spring"
+           xsi:schemaLocation="http://www.springframework.org/schema/beans
+                http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		        http://www.springframework.org/schema/context
+                http://www.springframework.org/schema/context/spring-context-3.0.xsd
+                http://www.hazelcast.com/schema/spring
+                http://www.hazelcast.com/schema/spring/hazelcast-spring-2.5.xsd">
+
+        <hz:hazelcast id="hzInstance">
+            <hz:config>
+                <hz:group name="dev" password="dev-pass"/>
+                <hz:network port="5701" port-auto-increment="true">
+                    <hz:join>
+                        <hz:multicast enabled="false"
+                                      multicast-group="224.2.2.3"
+                                      multicast-port="54327"/>
+                        <hz:tcp-ip enabled="true">
+                            <hz:members>10.150.120.93:5701</hz:members>
+                        </hz:tcp-ip>
+                    </hz:join>
+                </hz:network>
+                <hz:queue name="submitOrder_Q" max-size-per-jvm="0" backing-map-ref="submitOrder_C">
+                </hz:queue>
+                <hz:queue name="submitOrder_Q1" max-size-per-jvm="0" backing-map-ref="submitOrder_C">
+                </hz:queue>
+                <hz:queue name="submitOrder_Q2" max-size-per-jvm="0" backing-map-ref="submitOrder_C">
+                </hz:queue>
+                <hz:queue name="submitOrder_Q3" max-size-per-jvm="0" backing-map-ref="submitOrder_C">
+                </hz:queue>
+                <hz:map name="submitOrder_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY"/>
+
+            </hz:config>
+        </hz:hazelcast>
+        <hz:queue id="submitOrder_Q" instance-ref="hzInstance" name="submitOrder_Q"/>
+        <hz:queue id="submitOrder_Q1" instance-ref="hzInstance" name="submitOrder_Q1"/>
+        <hz:queue id="submitOrder_Q2" instance-ref="hzInstance" name="submitOrder_Q2"/>
+        <hz:queue id="submitOrder_Q3" instance-ref="hzInstance" name="submitOrder_Q3"/>
+
+        <hz:map id="submitOrder_C" instance-ref="hzInstance" name="submitOrder_C"/>
+    </beans>
+</mule>

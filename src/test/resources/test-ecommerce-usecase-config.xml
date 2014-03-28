@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hz="http://www.mulesoft.org/schema/mule/hz"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:quartz="http://www.mulesoft.org/schema/mule/quartz"
+      xmlns:test="http://www.mulesoft.org/schema/mule/test"
+      xmlns:script="http://www.mulesoft.org/schema/mule/scripting"
+      xsi:schemaLocation="
+       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.3/mule.xsd
+       http://www.mulesoft.org/schema/mule/hz META-INF/mule-hz.xsd
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.3/mule-vm.xsd
+       http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+       http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/3.3/mule-quartz.xsd
+       http://www.mulesoft.org/schema/mule/test http://www.mulesoft.org/schema/mule/test/current/mule-test.xsd">
+
+    <quartz:endpoint jobName="testJob" startDelay="2500"  repeatInterval="120" repeatCount="-1" name="testEndpoint" />
+    <quartz:endpoint jobName="testJob1" startDelay="2500"  repeatInterval="120" repeatCount="-1" name="testEndpoint1" />
+
+    <quartz:endpoint jobName="testJob2" startDelay="2500"  repeatInterval="120" repeatCount="-1" name="testEndpoint2" />
+    <quartz:endpoint jobName="testJob3" startDelay="2500"  repeatInterval="120" repeatCount="-1" name="testEndpoint3" />
+    <quartz:endpoint jobName="testJob4" startDelay="2500"  repeatInterval="120" repeatCount="-1" name="testEndpoint4" />
+
+    <spring:beans>
+        <spring:import resource="spring-hazelcast.xml" />
+    </spring:beans>
+
+    <hz:get-response-from-map-transformer hzInstance-ref="hzInstance"   name="responseMap" mapName="submitOrder_C1"  timeout="120" frequency="20"/>
+
+
+    <hz:connector name="hzConnector" hzInstance-ref="hzInstance" />
+
+
+    <hz:connector name="hzConnectorIN" hzInstance-ref="hzInstance" />
+    <hz:connector name="hzConnector2" hzInstance-ref="hzInstance" />
+    <hz:connector name="hzConnector3" hzInstance-ref="hzInstance" />
+    <hz:connector name="hzConnector4" hzInstance-ref="hzInstance" />
+    <hz:connector name="hzConnector5" hzInstance-ref="hzInstance" />
+
+    <script:filter name="scriptFilter">
+        <script:script engine="groovy">
+            <script:text>
+                return payload.payload.DLQRedeliveryCount >= 5
+            </script:text>
+        </script:script>
+    </script:filter>
+
+
+
+
+
+
+    <flow name="comergentFlow">
+        <hz:inbound-endpoint address="hz://queue/comergent_Q1"  connector-ref="hzConnector2">
+            <custom-transaction action="ALWAYS_BEGIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+        </hz:inbound-endpoint>
+        <log-component/>
+
+        <choice>
+            <when expression='!(payload.getUniqueId().equals("comergent_failure_1"))' evaluator="groovy">
+                <hz:outbound-endpoint address="hz://queue/rumba_getProduct_Q1"  connector-ref="hzConnector2">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+            <otherwise>
+                <test:component throwException="true"/>
+            </otherwise>
+        </choice>
+        <rollback-exception-strategy maxRedeliveryAttempts="5">
+            <on-redelivery-attempts-exceeded>
+                <hz:outbound-endpoint address="hz://queue/comergent_DLQ"  connector-ref="hzConnector">
+                    <custom-transaction action="ALWAYS_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </on-redelivery-attempts-exceeded>
+        </rollback-exception-strategy>
+
+    </flow>
+
+
+    <flow name="getRumbaProdcutFromSku">
+        <hz:inbound-endpoint address="hz://queue/rumba_getProduct_Q1"  connector-ref="hzConnector3">
+            <custom-transaction action="ALWAYS_BEGIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+        </hz:inbound-endpoint>
+        <log-component/>
+
+        <choice>
+            <when expression='!(payload.getUniqueId().equals("Rumba_failure_getProduct_1"))' evaluator="groovy">
+
+                <hz:outbound-endpoint address="hz://queue/createRumbaPayment_Q1"  connector-ref="hzConnector3">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+
+            </when>
+            <otherwise>
+                <test:component throwException="true"/>
+            </otherwise>
+        </choice>
+        <rollback-exception-strategy maxRedeliveryAttempts="5">
+            <on-redelivery-attempts-exceeded>
+                <hz:outbound-endpoint address="hz://queue/rumba_getProduct_DLQ"  connector-ref="hzConnector">
+                    <custom-transaction action="ALWAYS_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </on-redelivery-attempts-exceeded>
+        </rollback-exception-strategy>
+    </flow>
+
+    <flow name="createRumbaPaymentRecord">
+        <hz:inbound-endpoint address="hz://queue/createRumbaPayment_Q1"  connector-ref="hzConnector4">
+            <custom-transaction action="ALWAYS_BEGIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+        </hz:inbound-endpoint>
+        <log-component/>
+
+        <choice>
+            <when expression='!(payload.getUniqueId().equals("Rumba_failure_createPayment_1"))' evaluator="groovy">
+
+
+                <hz:outbound-endpoint address="hz://queue/createRumbaSubscription_Q1"  connector-ref="hzConnector4">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+
+            </when>
+            <otherwise>
+                <test:component throwException="true"/>
+            </otherwise>
+        </choice>
+        <rollback-exception-strategy maxRedeliveryAttempts="5">
+            <on-redelivery-attempts-exceeded>
+                <hz:outbound-endpoint address="hz://queue/createRumbaPayment_DLQ"  connector-ref="hzConnector5">
+                    <custom-transaction action="ALWAYS_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </on-redelivery-attempts-exceeded>
+        </rollback-exception-strategy>
+
+    </flow>
+
+    <flow name="createRumbaSubscription">
+        <hz:inbound-endpoint address="hz://queue/createRumbaSubscription_Q1"  connector-ref="hzConnector5">
+            <custom-transaction action="ALWAYS_BEGIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+        </hz:inbound-endpoint>
+        <log-component/>
+
+        <choice>
+            <when expression='!(payload.getUniqueId().equals("Rumba_failure_createSubscription_1"))' evaluator="groovy">
+
+                <hz:outbound-endpoint address="hz://map/submitOrder_C1" connector-ref="hzConnector2">
+                </hz:outbound-endpoint>
+                <transformer ref="responseMap"></transformer>
+                <log-component/>
+            </when>
+            <otherwise>
+                <test:component throwException="true"/>
+            </otherwise>
+        </choice>
+        <rollback-exception-strategy maxRedeliveryAttempts="5">
+            <on-redelivery-attempts-exceeded>
+                <hz:outbound-endpoint address="hz://queue/createRumbaSubscription_DLQ"  connector-ref="hzConnector5">
+                    <custom-transaction action="ALWAYS_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </on-redelivery-attempts-exceeded>
+        </rollback-exception-strategy>
+    </flow>
+
+
+    <flow name="quartz-comergentFlow">
+        <quartz:inbound-endpoint ref="testEndpoint1">
+            <quartz:endpoint-polling-job >
+                <quartz:job-endpoint address="hz://queue/comergent_DLQ?connector=hzConnector5" />
+            </quartz:endpoint-polling-job>
+        </quartz:inbound-endpoint>
+        <choice>
+            <when expression="!(payload.DLQRedeliveryCount > 5)" evaluator="groovy">
+                <expression-component>payload.DLQRedeliveryCount = payload.DLQRedeliveryCount + 1</expression-component>
+                <hz:outbound-endpoint address="hz://queue/comergent_Q1"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+            <when expression="payload.DLQRedeliveryCount >= 5" evaluator="groovy">
+                <expression-component>payload.queueIdentifier = "comergent_Q1"</expression-component>
+                <hz:outbound-endpoint address="hz://queue/DISCARD_Q"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+        </choice>
+
+        <log-component/>
+    </flow>
+
+    <flow name="quartz-getProductFlow">
+        <quartz:inbound-endpoint ref="testEndpoint2">
+            <quartz:endpoint-polling-job >
+                <quartz:job-endpoint address="hz://queue/rumba_getProduct_DLQ?connector=hzConnector5" />
+            </quartz:endpoint-polling-job>
+        </quartz:inbound-endpoint>
+        <choice>
+            <when expression="!(payload.DLQRedeliveryCount > 5)" evaluator="groovy">
+                <expression-component>payload.DLQRedeliveryCount = payload.DLQRedeliveryCount + 1</expression-component>
+                <hz:outbound-endpoint address="hz://queue/rumba_getProduct_Q1"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+            <when expression="payload.DLQRedeliveryCount >= 5" evaluator="groovy">
+                <expression-component>payload.queueIdentifier = "rumba_getProduct_Q1"</expression-component>
+                <hz:outbound-endpoint address="hz://queue/DISCARD_Q"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+        </choice>
+
+        <log-component/>
+    </flow>
+
+    <flow name="quartz-createRumbaPaymentFlow">
+        <quartz:inbound-endpoint ref="testEndpoint3">
+            <quartz:endpoint-polling-job >
+                <quartz:job-endpoint address="hz://queue/createRumbaPayment_DLQ?connector=hzConnector5" />
+            </quartz:endpoint-polling-job>
+        </quartz:inbound-endpoint>
+        <choice>
+            <when expression="!(payload.DLQRedeliveryCount > 5)" evaluator="groovy">
+                <expression-component>payload.DLQRedeliveryCount = payload.DLQRedeliveryCount + 1</expression-component>
+                <hz:outbound-endpoint address="hz://queue/createRumbaPayment_Q1"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+            <when expression="payload.DLQRedeliveryCount >= 5" evaluator="groovy">
+                <expression-component>payload.queueIdentifier = "createRumbaPayment_Q1"</expression-component>
+                <hz:outbound-endpoint address="hz://queue/DISCARD_Q"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+        </choice>
+
+        <log-component/>
+    </flow>
+
+    <flow name="quartz-createRumbaSubscriptionFlow">
+        <quartz:inbound-endpoint ref="testEndpoint4">
+            <quartz:endpoint-polling-job >
+                <quartz:job-endpoint address="hz://queue/createRumbaSubscription_DLQ?connector=hzConnector5" />
+            </quartz:endpoint-polling-job>
+        </quartz:inbound-endpoint>
+        <choice>
+            <when expression="!(payload.DLQRedeliveryCount > 5)" evaluator="groovy">
+                <expression-component>payload.DLQRedeliveryCount = payload.DLQRedeliveryCount + 1</expression-component>
+                <hz:outbound-endpoint address="hz://queue/createRumbaSubscription_Q1"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+            <when expression="payload.DLQRedeliveryCount >= 5" evaluator="groovy">
+                <expression-component>payload.queueIdentifier = "createRumbaSubscription_Q1"</expression-component>
+                <hz:outbound-endpoint address="hz://queue/DISCARD_Q"  connector-ref="hzConnector">
+                    <custom-transaction action="BEGIN_OR_JOIN" factory-class="com.mule.transport.hz.HzTransactionFactory"/>
+                </hz:outbound-endpoint>
+            </when>
+
+        </choice>
+
+        <log-component/>
+    </flow>
+</mule>

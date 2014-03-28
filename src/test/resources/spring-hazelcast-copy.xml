@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd ">
+    <beans xmlns="http://www.springframework.org/schema/beans"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:context="http://www.springframework.org/schema/context"
+           xmlns:hz="http://www.hazelcast.com/schema/spring"
+           xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+
+           xsi:schemaLocation="http://www.springframework.org/schema/beans
+                http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		        http://www.springframework.org/schema/context
+                http://www.springframework.org/schema/context/spring-context-3.0.xsd
+                http://www.springframework.org/schema/data/mongo
+                http://www.springframework.org/schema/data/mongo/spring-mongo-1.1.xsd
+                http://www.hazelcast.com/schema/spring
+                http://www.hazelcast.com/schema/spring/hazelcast-spring-2.5.xsd">
+
+        <hz:hazelcast id="hzInstance">
+            <hz:config>
+                <hz:group name="dev" password="dev-pass"/>
+                <hz:network port="5701" port-auto-increment="true">
+                    <hz:join>
+                        <hz:multicast enabled="false"
+                                      multicast-group="224.2.2.3"
+                                      multicast-port="54327"/>
+                        <hz:tcp-ip enabled="true">
+                            <hz:members>10.150.120.93:5701</hz:members>
+                        </hz:tcp-ip>
+                    </hz:join>
+                </hz:network>
+                <hz:queue name="comergent_Q1" max-size-per-jvm="0" backing-map-ref="comergent_C">
+                </hz:queue>
+                <hz:queue name="rumba_getProduct_Q1" max-size-per-jvm="0" backing-map-ref="rumba_getProduct_C">
+                </hz:queue>
+                <hz:queue name="createRumbaPayment_Q1" max-size-per-jvm="0" backing-map-ref="createRumbaPayment_C">
+                </hz:queue>
+                <hz:queue name="createRumbaSubscription_Q1" max-size-per-jvm="0" backing-map-ref="createRumbaSubscription_C">
+                </hz:queue>
+                <hz:queue name="DISCARD_Q" max-size-per-jvm="0" backing-map-ref="DISCARD_C">
+                </hz:queue>
+                <hz:map name="comergent_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY">
+                <hz:map-store enabled="true" implementation="mongomapstore"
+                              write-delay-seconds="0">
+                </hz:map-store>
+                </hz:map>
+                <hz:map name="rumba_getProduct_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY">
+                    <hz:map-store enabled="true" implementation="mongomapstore"
+                                  write-delay-seconds="0">
+                    </hz:map-store>
+                </hz:map>
+                <hz:map name="createRumbaPayment_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY">
+                    <hz:map-store enabled="true" implementation="mongomapstore"
+                                  write-delay-seconds="0">
+                    </hz:map-store>
+                </hz:map>
+                <hz:map name="createRumbaSubscription_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY">
+                    <hz:map-store enabled="true" implementation="mongomapstore"
+                                  write-delay-seconds="0">
+                    </hz:map-store>
+                </hz:map>
+                <hz:map name="DISCARD_C"
+                        backup-count="1"
+                        max-size="0"
+                        eviction-percentage="25"
+                        read-backup-data="false"
+                        cache-value="true"
+                        eviction-policy="NONE"
+                        merge-policy="hz.ADD_NEW_ENTRY">
+                    <hz:map-store enabled="true" implementation="mongomapstore"
+                                  write-delay-seconds="0">
+                    </hz:map-store>
+                </hz:map>
+            </hz:config>
+        </hz:hazelcast>
+
+        <hz:map id="comergent_C" instance-ref="hzInstance" name="comergent_C"/>
+        <hz:map id="rumba_getProduct_C" instance-ref="hzInstance" name="rumba_getProduct_C"/>
+        <hz:map id="createRumbaPayment_C" instance-ref="hzInstance" name="createRumbaPayment_C"/>
+        <hz:map id="createRumbaSubscription_C" instance-ref="hzInstance" name="createRumbaSubscription_C"/>
+        <hz:map id="DISCARD_C" instance-ref="hzInstance" name="DISCARD_C"/>
+
+
+        <mongo:mongo id="mongo" host="localhost" port="27017"/>
+        <bean id="mongoTemplate"
+              class="org.springframework.data.mongodb.core.MongoTemplate">
+            <constructor-arg ref="mongo"/>
+            <constructor-arg name="databaseName" value="mercatus"/>
+        </bean>
+
+        <bean class="com.mule.transport.hz.persistence.MongoMapStore" id="mongomapstore">
+            <property name="mongoTemplate" ref="mongoTemplate" />
+        </bean>
+
+
+    </beans>
+</mule>
