@@ -66,7 +66,7 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
 
 
     @Test
-    public void testMercatusUseCase() throws Exception {
+    public void testUseCase() throws Exception {
 
         HzConnector hzConnector = (HzConnector) muleContext.getRegistry().lookupConnector("hzConnector");
         HazelcastInstance hazelcastInstance =  hzConnector.getHzInstance() ;
@@ -102,7 +102,7 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
 
 
     @Test
-    public void testMercatusFailureComergentUseCase() throws Exception {
+    public void testFailureComergentUseCase() throws Exception {
 
         HzConnector hzConnector = (HzConnector) muleContext.getRegistry().lookupConnector("hzConnector");
         HazelcastInstance hazelcastInstance =  hzConnector.getHzInstance() ;
@@ -146,18 +146,18 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
     }
 
     @Test
-    public void testMercatusFailureGetProductRumbaUseCase() throws Exception {
+    public void testFailureGetProductUseCase() throws Exception {
 
         HzConnector hzConnector = (HzConnector) muleContext.getRegistry().lookupConnector("hzConnector");
         HazelcastInstance hazelcastInstance =  hzConnector.getHzInstance() ;
-        IQueue inputQueue = hazelcastInstance.getQueue("rumba_getProduct_Q1");
+        IQueue inputQueue = hazelcastInstance.getQueue("getProduct_Q1");
         IQueue outputQueue = hazelcastInstance.getQueue( "DISCARD_Q" );
         final String input = "This is a test";
 
         TestMessage message = new TestMessage();
         message.setId("1");
         message.setExternalId("External Id");
-        message.setUniqueId("Rumba_failure_getProduct_1");
+        message.setUniqueId("_failure_getProduct_1");
         message.setPayLoad("orderId=1111111");
         hazelcastInstance.getTransaction().begin();
         inputQueue.offer( message );
@@ -184,7 +184,7 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
         assertNotNull( output );
         assertEquals( message.getUniqueId(), messageOut.getUniqueId());
         assertEquals(6, messageOut.getDLQRedeliveryCount());
-        assertEquals("rumba_getProduct_Q1", messageOut.getQueueIdentifier());
+        assertEquals("getProduct_Q1", messageOut.getQueueIdentifier());
 
         assertTrue(inputQueue.isEmpty() );
     }
@@ -192,18 +192,18 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
 
 
     @Test
-    public void testMercatusFailureCreateRumbaPaymentRecordUseCase() throws Exception {
+    public void testFailureCreatePaymentRecordUseCase() throws Exception {
 
         HzConnector hzConnector = (HzConnector) muleContext.getRegistry().lookupConnector("hzConnector");
         HazelcastInstance hazelcastInstance =  hzConnector.getHzInstance() ;
-        IQueue inputQueue = hazelcastInstance.getQueue("createRumbaPayment_Q1");
+        IQueue inputQueue = hazelcastInstance.getQueue("createPayment_Q1");
         IQueue outputQueue = hazelcastInstance.getQueue( "DISCARD_Q" );
         final String input = "This is a test";
 
         TestMessage message = new TestMessage();
         message.setId("1");
         message.setExternalId("External Id");
-        message.setUniqueId("Rumba_failure_createPayment_1");
+        message.setUniqueId("_failure_createPayment_1");
         message.setPayLoad("orderId=1111111");
         hazelcastInstance.getTransaction().begin();
         inputQueue.offer( message );
@@ -230,24 +230,24 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
         assertNotNull( output );
         assertEquals( message.getUniqueId(), messageOut.getUniqueId());
         assertEquals(6, messageOut.getDLQRedeliveryCount());
-        assertEquals("createRumbaPayment_Q1", messageOut.getQueueIdentifier());
+        assertEquals("createPayment_Q1", messageOut.getQueueIdentifier());
 
         assertTrue(inputQueue.isEmpty() );
     }
 
 
     @Test
-    public void testMercatusFailureCreateRumbaSubscriptionUseCase() throws Exception {
+    public void testFailureCreateSubscriptionUseCase() throws Exception {
 
         HzConnector hzConnector = (HzConnector) muleContext.getRegistry().lookupConnector("hzConnector");
         HazelcastInstance hazelcastInstance =  hzConnector.getHzInstance() ;
-        IQueue inputQueue = hazelcastInstance.getQueue("createRumbaSubscription_Q1");
+        IQueue inputQueue = hazelcastInstance.getQueue("createSubscription_Q1");
         IQueue outputQueue = hazelcastInstance.getQueue( "DISCARD_Q" );
 
         TestMessage message = new TestMessage();
         message.setId("1");
         message.setExternalId("External Id");
-        message.setUniqueId("Rumba_failure_createSubscription_1");
+        message.setUniqueId("_failure_createSubscription_1");
         message.setPayLoad("orderId=1111111");
         hazelcastInstance.getTransaction().begin();
         inputQueue.offer( message );
@@ -274,7 +274,7 @@ public class HzFunctionalEcommerceUseCaseTestCase extends FunctionalTestCase
         assertNotNull( output );
         assertEquals( message.getUniqueId(), messageOut.getUniqueId());
         assertEquals(6, messageOut.getDLQRedeliveryCount());
-        assertEquals("createRumbaSubscription_Q1", messageOut.getQueueIdentifier());
+        assertEquals("createSubscription_Q1", messageOut.getQueueIdentifier());
 
         assertTrue(inputQueue.isEmpty() );
     }
