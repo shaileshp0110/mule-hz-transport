@@ -22,3 +22,5 @@ The payload get converted to type HzMessage  , which gives  message some propert
 Test Use case  , which test the cluster and fail-over handling of the message which can give more insight of the transport
 
 Test 1
+
+Test 2
