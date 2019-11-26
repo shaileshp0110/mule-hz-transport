@@ -20,3 +20,5 @@ Transformer to get the message from the map based on the name of the map
 The payload get converted to type HzMessage  , which gives  message some properties like to keep track of delivery counts etc
 
 Test Use case  , which test the cluster and fail-over handling of the message which can give more insight of the transport
+
+Test 1
